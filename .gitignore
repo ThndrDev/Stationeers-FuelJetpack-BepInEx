@@ -1,0 +1,8 @@
+obj/*
+externals/*
+bin/Debug/*
+.vs/VSWorkspaceState.json
+.vs/slnx.sqlite
+.vs/Stationeers-PlantsnNutritionRebalance-BepInEx/v16/.suo
+*.dll
+*.zip
