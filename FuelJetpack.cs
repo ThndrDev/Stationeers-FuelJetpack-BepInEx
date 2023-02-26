@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace FuelJetpack.Scripts
 {
-    [BepInPlugin("net.ThndrDev.stationeers.FuelJetpack.Scripts", "Fuel Jetpack", "0.1.0.0")]    
+    [BepInPlugin("net.ThndrDev.stationeers.FuelJetpack.Scripts", "Fuel Jetpack", "0.2.0.0")]    
     public class FuelJetpackPlugin : BaseUnityPlugin
     {
         public static FuelJetpackPlugin Instance;

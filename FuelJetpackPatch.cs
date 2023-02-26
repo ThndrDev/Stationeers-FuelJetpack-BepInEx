@@ -44,7 +44,8 @@ namespace FuelJetpack.Scripts
             if (__instance.CurrentEmission > 0f)
             {
                 FJ.EjectInternalAtmosphere(__instance);
-                GasMixture gasMixture = __instance.PropellentCanister.InternalAtmosphere.Remove(__instance.MolesToUse * (__instance.OutputSetting * 1.5f));
+                float gravityfactor = Mathf.Clamp((WorldManager.CurrentWorldSetting.Gravity / -5f), 0.5f, 5f);
+                GasMixture gasMixture = __instance.PropellentCanister.InternalAtmosphere.Remove(__instance.MolesToUse * (__instance.OutputSetting * gravityfactor));
                 __instance.InternalAtmosphere.Add(gasMixture);
                 __instance.InternalAtmosphere.Sparked = true;
                 __instance.InternalAtmosphere.ManualCombust(1f);
