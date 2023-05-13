@@ -53,8 +53,8 @@ namespace FuelJetpack.Scripts
             return false;
         }
 
-        //private static float oldvalue;
-        //private static bool speedboosted;
+        private static float oldvalue;
+        private static bool speedboosted = false;
         [HarmonyPatch("LateUpdate")]
         [HarmonyPostfix]
         [UsedImplicitly]
@@ -63,39 +63,38 @@ namespace FuelJetpack.Scripts
             // Boost the jetpack OutputSetting to max when shift is pressed. This doesn't work in BepInEx, only in Addons. I had to move this logic from patching the InteractWith to  LateUpdate
             // due to a strange error that happened just in BepInEx when patching InteractWith and, as a consequence, the logic to detect keypresses stopped working. If you know how to solve this,
             // please send a pull request.
-            /*
             if (!speedboosted && KeyManager.GetButtonDown(KeyCode.LeftShift))
-           {
-               oldvalue = __instance.OutputSetting;
-               speedboosted = true;
-               __instance.OutputSetting = Jetpack.MaxSetting;
-           }
-           // And back to the previous value when shift is released
-           if (speedboosted && KeyManager.GetButtonUp(KeyCode.LeftShift))
-           {
-               __instance.OutputSetting = oldvalue;
-               speedboosted = false;
-           }*/
-           // Change the jetpack speed based on the OutputSetting
-           float baseJetpackSpeed;
-           switch (__instance.PrefabHash)
-           {
-               case 1969189000: 
-                   baseJetpackSpeed = 3f; // Jetpack Basic
-                   break;
-               case -1260618380: 
-                   baseJetpackSpeed = 5f; // Spacepack
-                   break;
-               case -412551656: 
-                   baseJetpackSpeed = 8f; // Hardsuit Jetpack
-                   break;
-               default:
-                   baseJetpackSpeed = 3f;
-                   break;
-           }
+            {
+                oldvalue = __instance.OutputSetting;
+                speedboosted = true;
+                __instance.OutputSetting = Jetpack.MaxSetting;
+            }
+            // And back to the previous value when shift is released
+            if (speedboosted && KeyManager.GetButtonUp(KeyCode.LeftShift))
+            {
+                __instance.OutputSetting = oldvalue;
+                speedboosted = false;
+            }
+            // Change the jetpack speed based on the OutputSetting
+            float baseJetpackSpeed;
+            switch (__instance.PrefabHash)
+            {
+                case 1969189000: 
+                    baseJetpackSpeed = 3f; // Jetpack Basic
+                    break;
+                case -1260618380: 
+                    baseJetpackSpeed = 5f; // Spacepack
+                    break;
+                case -412551656: 
+                    baseJetpackSpeed = 8f; // Hardsuit Jetpack
+                    break;
+                default:
+                    baseJetpackSpeed = 3f;
+                    break;
+            }
             __instance.JetPackSpeed = baseJetpackSpeed * Mathf.Clamp(__instance.OutputSetting + 0.5f, 0.6f, 2.5f);
         }
-    
+
         [HarmonyPatch("get_PropellantLow")]
         [HarmonyPrefix]
         [UsedImplicitly]

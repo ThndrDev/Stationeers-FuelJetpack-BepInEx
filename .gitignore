@@ -9,3 +9,6 @@ bin/Debug/*
 .vs/FuelJetpack/v17/.suo
 *.vsidx
 *.lock
+*.sln
+*.v2
+*.1
