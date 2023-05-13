@@ -28,7 +28,7 @@ namespace FuelJetpack.Scripts
             FJ.InitInternalAtmosphere(__instance); // Check if the internal atmosphere exists. If not, then create.
             if (!__instance.JetPackActivate)
             {
-                if (__instance.InternalAtmosphere.TotalMoles > Chemistry.MinimumValidTotalMoles)
+                if (__instance.InternalAtmosphere.TotalMoles > 0.001f)
                 {
                     FJ.EjectInternalAtmosphere(__instance);
                 }

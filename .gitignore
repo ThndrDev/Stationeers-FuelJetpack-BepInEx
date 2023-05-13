@@ -6,3 +6,6 @@ bin/Debug/*
 .vs/Stationeers-PlantsnNutritionRebalance-BepInEx/v16/.suo
 *.dll
 *.zip
+.vs/FuelJetpack/v17/.suo
+*.vsidx
+*.lock
