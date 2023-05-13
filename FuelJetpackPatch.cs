@@ -60,9 +60,7 @@ namespace FuelJetpack.Scripts
         [UsedImplicitly]
         static private void LateUpdatehPatch(Jetpack __instance)
         {
-            // Boost the jetpack OutputSetting to max when shift is pressed. This doesn't work in BepInEx, only in Addons. I had to move this logic from patching the InteractWith to  LateUpdate
-            // due to a strange error that happened just in BepInEx when patching InteractWith and, as a consequence, the logic to detect keypresses stopped working. If you know how to solve this,
-            // please send a pull request.
+            // Boost the jetpack OutputSetting to max when shift is pressed.
             if (!speedboosted && KeyManager.GetButtonDown(KeyCode.LeftShift))
             {
                 oldvalue = __instance.OutputSetting;
