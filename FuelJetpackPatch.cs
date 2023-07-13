@@ -5,6 +5,7 @@ using UnityEngine;
 using Assets.Scripts.Objects.Items;
 using Assets.Scripts.Atmospherics;
 using Assets.Scripts.Objects;
+using Assets.Scripts;
 
 namespace FuelJetpack.Scripts
 {
@@ -25,7 +26,12 @@ namespace FuelJetpack.Scripts
         [UsedImplicitly]
         static private bool OnAtmosphericTickPatch(Jetpack __instance)
         {
-            FJ.InitInternalAtmosphere(__instance); // Check if the internal atmosphere exists. If not, then create.
+            if (!GameManager.RunSimulation) //Do nothing if the game is paused
+            {
+                return false;
+            }
+
+            FJ.InitInternalAtmosphere(__instance); // Check if the internal jetpack atmosphere exists. If not, then create.
             if (!__instance.JetPackActivate)
             {
                 if (__instance.InternalAtmosphere.TotalMoles > 0.001f)
@@ -45,7 +51,7 @@ namespace FuelJetpack.Scripts
             {
                 FJ.EjectInternalAtmosphere(__instance);
                 float gravityfactor = Mathf.Clamp((WorldManager.CurrentWorldSetting.Gravity / -5f), 0.5f, 5f);
-                GasMixture gasMixture = __instance.PropellentCanister.InternalAtmosphere.Remove(__instance.MolesToUse * (__instance.OutputSetting * gravityfactor));
+                GasMixture gasMixture = __instance.PropellentCanister.InternalAtmosphere.Remove(__instance.MolesToUse * (__instance.OutputSetting * gravityfactor), AtmosphereHelper.MatterState.Gas);
                 __instance.InternalAtmosphere.Add(gasMixture);
                 __instance.InternalAtmosphere.Sparked = true;
                 __instance.InternalAtmosphere.ManualCombust(1f);
