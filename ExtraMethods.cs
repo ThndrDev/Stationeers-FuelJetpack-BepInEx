@@ -9,6 +9,10 @@ namespace FuelJetpack.Scripts
         public static void EjectInternalAtmosphere(Jetpack jetpack)
         {
             bool inflamed = jetpack.InternalAtmosphere.Inflamed;
+            if (jetpack.WorldAtmosphere == null || jetpack.WorldAtmosphere.Mode == AtmosphereHelper.AtmosphereMode.Global)
+            {
+                jetpack.WorldAtmosphere = jetpack.GridController.AtmosphericsController.CloneGlobalAtmosphere(jetpack.ParentSlot.Parent.WorldGrid, 0L, true);
+            }
             jetpack.WorldAtmosphere.Add(jetpack.InternalAtmosphere.GasMixture);
             if (jetpack.WorldAtmosphere != null)
             {

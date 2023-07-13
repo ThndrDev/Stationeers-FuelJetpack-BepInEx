@@ -6,6 +6,7 @@ using Assets.Scripts.Objects.Items;
 using Assets.Scripts.Atmospherics;
 using Assets.Scripts.Objects;
 using Assets.Scripts;
+using System.Collections.Generic;
 
 namespace FuelJetpack.Scripts
 {
@@ -59,25 +60,36 @@ namespace FuelJetpack.Scripts
             return false;
         }
 
-        private static float oldvalue;
-        private static bool speedboosted = false;
+        private static Dictionary<Jetpack, float> jetpackOldValues = new Dictionary<Jetpack, float>();
+        private static Dictionary<Jetpack, bool> jetpackBoostStates = new Dictionary<Jetpack, bool>();
         [HarmonyPatch("LateUpdate")]
         [HarmonyPostfix]
         [UsedImplicitly]
         static private void LateUpdatehPatch(Jetpack __instance)
         {
-            // Boost the jetpack OutputSetting to max when shift is pressed.
-            if (!speedboosted && KeyManager.GetButtonDown(KeyCode.LeftShift))
+            if (!jetpackBoostStates.ContainsKey(__instance))
             {
-                oldvalue = __instance.OutputSetting;
-                speedboosted = true;
+                jetpackBoostStates[__instance] = false;
+            }
+
+            if (!jetpackOldValues.ContainsKey(__instance))
+            {
+                jetpackOldValues[__instance] = __instance.OutputSetting;
+            }
+
+            // Boost the jetpack OutputSetting to max when shift is pressed.
+            if (!jetpackBoostStates[__instance] && KeyManager.GetButtonDown(KeyCode.LeftShift))
+            {
+                jetpackOldValues[__instance] = __instance.OutputSetting;
+                jetpackBoostStates[__instance] = true;
                 __instance.OutputSetting = Jetpack.MaxSetting;
             }
+
             // And back to the previous value when shift is released
-            if (speedboosted && KeyManager.GetButtonUp(KeyCode.LeftShift))
+            if (jetpackBoostStates[__instance] && KeyManager.GetButtonUp(KeyCode.LeftShift))
             {
-                __instance.OutputSetting = oldvalue;
-                speedboosted = false;
+                __instance.OutputSetting = jetpackOldValues[__instance];
+                jetpackBoostStates[__instance] = false;
             }
             // Change the jetpack speed based on the OutputSetting
             float baseJetpackSpeed;
