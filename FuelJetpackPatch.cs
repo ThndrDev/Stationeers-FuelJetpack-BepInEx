@@ -91,9 +91,9 @@ namespace FuelJetpack.Scripts
                 __instance.OutputSetting = jetpackOldValues[__instance];
                 jetpackBoostStates[__instance] = false;
             }
-            // Change the jetpack speed based on the OutputSetting
+            // This changes the jetpack speed
             float baseJetpackSpeed;
-            switch (__instance.PrefabHash)
+            switch (__instance.PrefabHash) //get the current jetpack prefabhast and the vanilla speed value for it
             {
                 case 1969189000: 
                     baseJetpackSpeed = 3f; // Jetpack Basic
@@ -108,6 +108,15 @@ namespace FuelJetpack.Scripts
                     baseJetpackSpeed = 3f;
                     break;
             }
+            // If the propellant canister contains NitrousOxide and Volatiles, increase the base speed by 25%
+            if (__instance.PropellentCanister != null &&
+                __instance.PropellentCanister.InternalAtmosphere != null &&
+                __instance.PropellentCanister.InternalAtmosphere.GasMixture.NitrousOxide.Quantity > 0.01f &&
+                __instance.PropellentCanister.InternalAtmosphere.GasMixture.Volatiles.Quantity > 0.01f)
+            {
+                baseJetpackSpeed *= 1.25f;
+            }
+            // Also multiply the speed by the OutputSetting of the jetpack (the Thrust up and down buttons setting) to a max of 250% speed boost
             __instance.JetPackSpeed = baseJetpackSpeed * Mathf.Clamp(__instance.OutputSetting + 0.5f, 0.6f, 2.5f);
         }
 
