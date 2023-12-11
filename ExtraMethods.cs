@@ -2,7 +2,7 @@
 using Assets.Scripts.Objects.Items;
 using UnityEngine;
 
-namespace FuelJetpack.Scripts
+namespace FuelJetpack
 {
     public class FJ
     {

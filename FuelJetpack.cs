@@ -1,11 +1,12 @@
 ﻿using System;
 using BepInEx;
+using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
 
-namespace FuelJetpack.Scripts
+namespace FuelJetpack
 {
-    [BepInPlugin("net.ThndrDev.stationeers.FuelJetpack.Scripts", "Fuel Jetpack", "0.3.0.0")]    
+    [BepInPlugin("FuelJetpack", "Fuel Jetpack", "0.4.0.0")]    
     public class FuelJetpackPlugin : BaseUnityPlugin
     {
         public static FuelJetpackPlugin Instance;
@@ -18,6 +19,7 @@ namespace FuelJetpack.Scripts
         {
             FuelJetpackPlugin.Instance = this;
             Log("Hello World");
+            ConfigFile.HandleConfig(this);     // read (or create) the configuration file parameters
             var harmony = new Harmony("net.ThndrDev.stationeers.FuelJetpack.Scripts");
             harmony.PatchAll();
             Log("Patch succeeded");

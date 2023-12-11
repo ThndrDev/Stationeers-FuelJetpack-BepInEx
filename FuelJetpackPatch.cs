@@ -8,7 +8,7 @@ using Assets.Scripts.Objects;
 using Assets.Scripts;
 using System.Collections.Generic;
 
-namespace FuelJetpack.Scripts
+namespace FuelJetpack
 {
     [HarmonyPatch(typeof(Jetpack))]
     class PatchJetpack
@@ -18,46 +18,78 @@ namespace FuelJetpack.Scripts
         [UsedImplicitly]
         static private bool HasPropellentPatch(Jetpack __instance, ref bool __result)
         {
-            __result = __instance.PropellentCanister && __instance.PropellentCanister.InternalAtmosphere != null && (__instance.PropellentCanister.InternalAtmosphere.GasMixture.Volatiles.Quantity > 0.01f && (__instance.PropellentCanister.InternalAtmosphere.GasMixture.Oxygen.Quantity > 0.01f || __instance.PropellentCanister.InternalAtmosphere.GasMixture.NitrousOxide.Quantity > 0.01f));
-            return false;
+            GasCanister gasCanister;
+            if (!__instance.PropellentSlot.Contains<GasCanister>(out gasCanister))
+            {
+                __result = false;
+                return false; 
+            }
+
+            if (gasCanister == null || gasCanister.InternalAtmosphere == null)
+            {
+                __result = false;
+                return false; 
+            }
+
+            Atmosphere internalAtmosphere = gasCanister.InternalAtmosphere;
+            __result = internalAtmosphere.GasMixture.Volatiles.Quantity > 0.01f &&
+                       (internalAtmosphere.GasMixture.Oxygen.Quantity > 0.01f ||
+                        internalAtmosphere.GasMixture.NitrousOxide.Quantity > 0.01f);
+            return false; 
         }
-        
+
         [HarmonyPatch("OnAtmosphericTick")]
         [HarmonyPrefix]
         [UsedImplicitly]
         static private bool OnAtmosphericTickPatch(Jetpack __instance)
         {
-            if (!GameManager.RunSimulation) //Do nothing if the game is paused
+            if (!GameManager.RunSimulation || !__instance.JetPackActivate)
             {
-                return false;
+                return false; //exit if game is paused or if jetpack is not activated
             }
 
-            FJ.InitInternalAtmosphere(__instance); // Check if the internal jetpack atmosphere exists. If not, then create.
-            if (!__instance.JetPackActivate)
-            {
-                if (__instance.InternalAtmosphere.TotalMoles > 0.001f)
-                {
-                    FJ.EjectInternalAtmosphere(__instance);
-                }
-                return false;
-            }
-            // If Jetpack activated, and no canister or invalid fuel. Deactivate jetpack and exit.
-            if (__instance.JetPackActivate && (__instance.PropellentCanister == null || !__instance.HasPropellent))
+            FJ.InitInternalAtmosphere(__instance); // Initialize internal atmosphere if not already done
+
+            // Check for fuel canister presence and fuel
+            GasCanister gasCanister;
+            if (!__instance.PropellentSlot.Contains<GasCanister>(out gasCanister) || gasCanister.InternalAtmosphere == null || !__instance.HasPropellent)
             {
                 Thing.Interact(__instance.InteractActivate, 0);
-                return false;
+                return false; // turn off jetpack and exit if the canister doesn't exists or is empty
             }
+
             // If there's a jetpack emission, burn some fuel
             if (__instance.CurrentEmission > 0f)
             {
-                FJ.EjectInternalAtmosphere(__instance);
-                float gravityfactor = Mathf.Clamp((WorldManager.CurrentWorldSetting.Gravity / -5f), 0.5f, 5f);
-                GasMixture gasMixture = __instance.PropellentCanister.InternalAtmosphere.Remove(__instance.MolesToUse * (__instance.OutputSetting * gravityfactor), AtmosphereHelper.MatterState.Gas);
-                __instance.InternalAtmosphere.Add(gasMixture);
-                __instance.InternalAtmosphere.Sparked = true;
-                __instance.InternalAtmosphere.ManualCombust(1f);
+                float gravityfactor;
+                if (ConfigFile.GravityFuelImpact)
+                {
+                    gravityfactor = Mathf.Clamp((WorldSetting.Current.Gravity / -5f), 0.5f, 5f);
+                }
+                else
+                {
+                    gravityfactor = 1f;
+                }
+                float fuelToConsume = __instance.MolesToUse * (__instance.OutputSetting * gravityfactor * ConfigFile.FuelUsageMultiplier);
+                GasMixture removedGas = gasCanister.InternalAtmosphere.Remove(fuelToConsume, AtmosphereHelper.MatterState.Gas);
+
+                if (!removedGas.IsNaN())
+                {
+                    // Add the removed gas to the internal atmosphere of the jetpack and handle combustion
+                    __instance.InternalAtmosphere.Add(removedGas);
+                    __instance.InternalAtmosphere.Sparked = true;
+                    __instance.InternalAtmosphere.ManualCombust(1f);
+                    //And then eject the waste from the jetpack
+                    FJ.EjectInternalAtmosphere(__instance);
+                }
+                else
+                {
+                    // If no gas was removed, deactivate jetpack
+                    Thing.Interact(__instance.InteractActivate, 0);
+                }
             }
-            return false;
+
+            return false; // Skip the original method
         }
 
         private static Dictionary<Jetpack, float> jetpackOldValues = new Dictionary<Jetpack, float>();
@@ -109,10 +141,12 @@ namespace FuelJetpack.Scripts
                     break;
             }
             // If the propellant canister contains NitrousOxide and Volatiles, increase the base speed by 25%
-            if (__instance.PropellentCanister != null &&
-                __instance.PropellentCanister.InternalAtmosphere != null &&
-                __instance.PropellentCanister.InternalAtmosphere.GasMixture.NitrousOxide.Quantity > 0.01f &&
-                __instance.PropellentCanister.InternalAtmosphere.GasMixture.Volatiles.Quantity > 0.01f)
+            GasCanister gasCanister;
+            __instance.PropellentSlot.Contains<GasCanister>(out gasCanister);
+            if (gasCanister != null &&
+                gasCanister.InternalAtmosphere != null &&
+                gasCanister.InternalAtmosphere.GasMixture.NitrousOxide.Quantity > 0.01f &&
+                gasCanister.InternalAtmosphere.GasMixture.Volatiles.Quantity > 0.01f)
             {
                 baseJetpackSpeed *= 1.25f;
             }
@@ -128,7 +162,9 @@ namespace FuelJetpack.Scripts
             if (__instance.HasPropellent)
             {
                 //Jetpack Low alert when pressure is below 1000kpa
-                __result = __instance.PropellentCanister.InternalAtmosphere.PressureGassesAndLiquids < 1000f;                
+                GasCanister gasCanister;
+                __instance.PropellentSlot.Contains<GasCanister>(out gasCanister);
+                __result = gasCanister.InternalAtmosphere.PressureGassesAndLiquids < 1000f;                
                 return false;
             }
             __result = false;
@@ -145,14 +181,58 @@ namespace FuelJetpack.Scripts
                 __result = true; //Jetpack Critical alert when no canister or incorrect fuel is present
                 return false;
             }
-            if (__instance.PropellentCanister && __instance.PropellentCanister.InternalAtmosphere != null)
+            GasCanister gasCanister;
+            __instance.PropellentSlot.Contains<GasCanister>(out gasCanister);
+            if (gasCanister && gasCanister.InternalAtmosphere != null)
             {
                 //Jetpack Critical alert when pressure is below 500kpa
-                __result = __instance.PropellentCanister.InternalAtmosphere.PressureGassesAndLiquids < 500f;
+                __result = gasCanister.InternalAtmosphere.PressureGassesAndLiquids < 500f;
                 return false;
             }
             __result = false;
             return false;
         }
     }
+ /*
+    // This patches the Propellent slot of the jetpack to also allow liquid canisters.
+    [HarmonyPatch(typeof(Slot))]
+    public class PatchSlot
+    {
+        [HarmonyPatch(typeof(Slot), nameof(Slot.AllowSwap), new System.Type[] { typeof(Slot), typeof(Slot) })]
+        [HarmonyPostfix]
+        public static void SwapPostfix(Slot sourceSlot, Slot destinationSlot, ref bool __result)
+        {
+
+            bool flag = destinationSlot.Type == sourceSlot.Type || (destinationSlot.Type == Slot.Class.GasCanister && sourceSlot.Occupant.SlotType == Slot.Class.LiquidCanister);
+            if (!flag)
+            {
+                __result = false;            
+            }
+
+
+            if (sourceSlot.Occupant.CanEnter(destinationSlot))
+            {
+                if ((destinationSlot.Type == Slot.Class.GasCanister && sourceSlot.Occupant.SlotType == Slot.Class.LiquidCanister) ||
+                (destinationSlot.Type == Slot.Class.LiquidCanister && sourceSlot.Occupant.SlotType == Slot.Class.GasCanister))
+                {
+                    __result = true;
+                }
+            }
+        }
+
+        [HarmonyPatch("AllowMove")]
+        [HarmonyPostfix]
+        public static void MovePostfix(DynamicThing thing, Slot destinationSlot, ref bool __result)
+        {
+            if (thing.CanEnter(destinationSlot))
+            {
+                if ((destinationSlot.Type == Slot.Class.GasCanister && thing.SlotType == Slot.Class.LiquidCanister) ||
+                (destinationSlot.Type == Slot.Class.LiquidCanister && thing.SlotType == Slot.Class.GasCanister))
+                {
+                    __result = true;
+                }
+            }
+        }
+    }
+ */
 }

@@ -12,3 +12,5 @@ bin/Debug/*
 *.sln
 *.v2
 *.1
+FuelJetpack.csproj.user
+Properties/launchSettings.json
