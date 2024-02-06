@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace FuelJetpack
 {
-    [BepInPlugin("FuelJetpack", "Fuel Jetpack", "0.4.0.0")]    
+    [BepInPlugin("FuelJetpack", "Fuel Jetpack", "0.5.0.0")]    
     public class FuelJetpackPlugin : BaseUnityPlugin
     {
         public static FuelJetpackPlugin Instance;
