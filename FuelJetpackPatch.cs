@@ -43,19 +43,25 @@ namespace FuelJetpack
         [UsedImplicitly]
         static private bool OnAtmosphericTickPatch(Jetpack __instance)
         {
-            if (!GameManager.RunSimulation || !__instance.JetPackActivate)
+            if (!GameManager.RunSimulation)
             {
                 return false; //exit if game is paused or if jetpack is not activated
             }
 
             FJ.InitInternalAtmosphere(__instance); // Initialize internal atmosphere if not already done
 
+            // check if the jetpack is off (no emissions):
+            if (__instance.CurrentEmission <= 0)
+            {
+                return false; //exit if no jetpack emissions exists
+            }
+
             // Check for fuel canister presence and fuel
             GasCanister gasCanister;
             if (!__instance.PropellentSlot.Contains<GasCanister>(out gasCanister) || gasCanister.InternalAtmosphere == null || !__instance.HasPropellent)
             {
-                Thing.Interact(__instance.InteractActivate, 0);
-                return false; // turn off jetpack and exit if the canister doesn't exists or is empty
+                Thing.Interact(__instance.InteractActivate, 0); //turn off jetpack
+                return false; //and exit if the canister doesn't exists or is empty
             }
 
             // If there's a jetpack emission, burn some fuel
@@ -71,24 +77,16 @@ namespace FuelJetpack
                     gravityfactor = 1f;
                 }
                 float fuelToConsume = __instance.MolesToUse * (__instance.OutputSetting * gravityfactor * ConfigFile.FuelUsageMultiplier);
-                GasMixture removedGas = gasCanister.InternalAtmosphere.Remove(fuelToConsume, AtmosphereHelper.MatterState.Gas);
-
-                if (!removedGas.IsNaN())
-                {
+                if (fuelToConsume > 0f )
+                {              
                     // Add the removed gas to the internal atmosphere of the jetpack and handle combustion
-                    __instance.InternalAtmosphere.Add(removedGas);
+                    __instance.InternalAtmosphere.Add(gasCanister.InternalAtmosphere.Remove(fuelToConsume, AtmosphereHelper.MatterState.Gas));
                     __instance.InternalAtmosphere.Sparked = true;
                     __instance.InternalAtmosphere.ManualCombust(1f);
                     //And then eject the waste from the jetpack
                     FJ.EjectInternalAtmosphere(__instance);
                 }
-                else
-                {
-                    // If no gas was removed, deactivate jetpack
-                    Thing.Interact(__instance.InteractActivate, 0);
-                }
             }
-
             return false; // Skip the original method
         }
 
@@ -164,7 +162,7 @@ namespace FuelJetpack
                 //Jetpack Low alert when pressure is below 1000kpa
                 GasCanister gasCanister;
                 __instance.PropellentSlot.Contains<GasCanister>(out gasCanister);
-                __result = gasCanister.InternalAtmosphere.PressureGassesAndLiquids < 1000f;                
+                __result = gasCanister.InternalAtmosphere.PressureGassesAndLiquidsInPa < 1000f;                
                 return false;
             }
             __result = false;
@@ -186,7 +184,7 @@ namespace FuelJetpack
             if (gasCanister && gasCanister.InternalAtmosphere != null)
             {
                 //Jetpack Critical alert when pressure is below 500kpa
-                __result = gasCanister.InternalAtmosphere.PressureGassesAndLiquids < 500f;
+                __result = gasCanister.InternalAtmosphere.PressureGassesAndLiquidsInPa < 500f;
                 return false;
             }
             __result = false;
@@ -194,7 +192,9 @@ namespace FuelJetpack
         }
     }
  /*
-    // This patches the Propellent slot of the jetpack to also allow liquid canisters.
+    // This patches the Propellent slot of the jetpack to also allow liquid canisters. 
+    // WIP, this code allows liquid canisters inside if the slot is empty, but not if there's another canister inside already.
+
     [HarmonyPatch(typeof(Slot))]
     public class PatchSlot
     {
@@ -202,14 +202,6 @@ namespace FuelJetpack
         [HarmonyPostfix]
         public static void SwapPostfix(Slot sourceSlot, Slot destinationSlot, ref bool __result)
         {
-
-            bool flag = destinationSlot.Type == sourceSlot.Type || (destinationSlot.Type == Slot.Class.GasCanister && sourceSlot.Occupant.SlotType == Slot.Class.LiquidCanister);
-            if (!flag)
-            {
-                __result = false;            
-            }
-
-
             if (sourceSlot.Occupant.CanEnter(destinationSlot))
             {
                 if ((destinationSlot.Type == Slot.Class.GasCanister && sourceSlot.Occupant.SlotType == Slot.Class.LiquidCanister) ||
@@ -217,6 +209,7 @@ namespace FuelJetpack
                 {
                     __result = true;
                 }
+                //Debug.Log("Slot.AllowSwap: " + sourceSlot + " sourceSlot.occupant: " + sourceSlot.Occupant + " DestinationSlot: " + destinationSlot + " __result: " + __result);
             }
         }
 
@@ -226,13 +219,13 @@ namespace FuelJetpack
         {
             if (thing.CanEnter(destinationSlot))
             {
-                if ((destinationSlot.Type == Slot.Class.GasCanister && thing.SlotType == Slot.Class.LiquidCanister) ||
-                (destinationSlot.Type == Slot.Class.LiquidCanister && thing.SlotType == Slot.Class.GasCanister))
+                if (destinationSlot.Type == Slot.Class.GasCanister && thing.SlotType == Slot.Class.LiquidCanister && !(thing is DraggableThing))
                 {
                     __result = true;
                 }
             }
-        }
+            Debug.Log("Slot.AllowMove: Thing: " + thing + " thing.CanEnter(destinationSlot): " + (thing.CanEnter(destinationSlot)) + " DestinationSlot: " + destinationSlot + " !(thing is DraggableThing)" + !(thing is DraggableThing) + " __result: " + __result);
+        }        
     }
- */
+    */
 }
