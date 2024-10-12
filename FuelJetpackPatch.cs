@@ -32,9 +32,9 @@ namespace FuelJetpack
             }
 
             Atmosphere internalAtmosphere = gasCanister.InternalAtmosphere;
-            __result = internalAtmosphere.GasMixture.Volatiles.Quantity > 0.01f &&
-                       (internalAtmosphere.GasMixture.Oxygen.Quantity > 0.01f ||
-                        internalAtmosphere.GasMixture.NitrousOxide.Quantity > 0.01f);
+            __result = internalAtmosphere.GasMixture.Volatiles.Quantity > new MoleQuantity(0.01) &&
+                       (internalAtmosphere.GasMixture.Oxygen.Quantity > new MoleQuantity(0.01) ||
+                        internalAtmosphere.GasMixture.NitrousOxide.Quantity > new MoleQuantity(0.01));
             return false; 
         }
 
@@ -76,8 +76,8 @@ namespace FuelJetpack
                 {
                     gravityfactor = 1f;
                 }
-                float fuelToConsume = __instance.MolesToUse * (__instance.OutputSetting * gravityfactor * ConfigFile.FuelUsageMultiplier);
-                if (fuelToConsume > 0f )
+                MoleQuantity fuelToConsume = __instance.MolesToUse * (__instance.OutputSetting * gravityfactor * ConfigFile.FuelUsageMultiplier);
+                if (fuelToConsume > new MoleQuantity(0) )
                 {              
                     // Add the removed gas to the internal atmosphere of the jetpack and handle combustion
                     __instance.InternalAtmosphere.Add(gasCanister.InternalAtmosphere.Remove(fuelToConsume, AtmosphereHelper.MatterState.Gas));
@@ -108,7 +108,7 @@ namespace FuelJetpack
             }
 
             // Boost the jetpack OutputSetting to max when shift is pressed.
-            if (!jetpackBoostStates[__instance] && KeyManager.GetButtonDown(KeyCode.LeftShift))
+            if (!jetpackBoostStates[__instance] && __instance.JetPackActivate && KeyManager.GetButtonDown(KeyCode.LeftShift))
             {
                 jetpackOldValues[__instance] = __instance.OutputSetting;
                 jetpackBoostStates[__instance] = true;
@@ -143,8 +143,8 @@ namespace FuelJetpack
             __instance.PropellentSlot.Contains<GasCanister>(out gasCanister);
             if (gasCanister != null &&
                 gasCanister.InternalAtmosphere != null &&
-                gasCanister.InternalAtmosphere.GasMixture.NitrousOxide.Quantity > 0.01f &&
-                gasCanister.InternalAtmosphere.GasMixture.Volatiles.Quantity > 0.01f)
+                gasCanister.InternalAtmosphere.GasMixture.NitrousOxide.Quantity > new MoleQuantity(0.01) &&
+                gasCanister.InternalAtmosphere.GasMixture.Volatiles.Quantity > new MoleQuantity(0.01))
             {
                 baseJetpackSpeed *= 1.25f;
             }

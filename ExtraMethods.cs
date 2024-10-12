@@ -25,7 +25,7 @@ namespace FuelJetpack
         {
             if (jetpack.InternalAtmosphere == null)
             {
-                jetpack.InternalAtmosphere = new Atmosphere(jetpack, 1f, 0L);
+                jetpack.InternalAtmosphere = new Atmosphere(jetpack, new VolumeLitres(1), 0L);
             }
         }
     }

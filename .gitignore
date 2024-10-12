@@ -14,3 +14,4 @@ bin/Debug/*
 *.1
 FuelJetpack.csproj.user
 Properties/launchSettings.json
+/.vs
