@@ -1,12 +1,12 @@
-﻿using Assets.Scripts.UI;
-using HarmonyLib;
-using JetBrains.Annotations;
-using UnityEngine;
-using Assets.Scripts.Objects.Items;
+﻿using Assets.Scripts;
 using Assets.Scripts.Atmospherics;
 using Assets.Scripts.Objects;
-using Assets.Scripts;
+using Assets.Scripts.Objects.Items;
+using Assets.Scripts.UI;
+using HarmonyLib;
+using JetBrains.Annotations;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace FuelJetpack
 {
@@ -32,9 +32,15 @@ namespace FuelJetpack
             }
 
             Atmosphere internalAtmosphere = gasCanister.InternalAtmosphere;
-            __result = internalAtmosphere.GasMixture.Volatiles.Quantity > new MoleQuantity(0.01) &&
+            // checks if there's anything combustible inside the canister (excluding alcohol)
+            __result = (internalAtmosphere.GasMixture.Methane.Quantity > new MoleQuantity(0.01) ||
+                       internalAtmosphere.GasMixture.Hydrogen.Quantity > new MoleQuantity(0.01)
+                       &&
                        (internalAtmosphere.GasMixture.Oxygen.Quantity > new MoleQuantity(0.01) ||
-                        internalAtmosphere.GasMixture.NitrousOxide.Quantity > new MoleQuantity(0.01));
+                        internalAtmosphere.GasMixture.NitrousOxide.Quantity > new MoleQuantity(0.01) ||
+                        internalAtmosphere.GasMixture.Ozone.Quantity > new MoleQuantity(0.01)))
+                       ||
+                        internalAtmosphere.GasMixture.Hydrazine.Quantity > new MoleQuantity(0.01);
             return false; 
         }
 
@@ -55,6 +61,9 @@ namespace FuelJetpack
             {
                 return false; //exit if no jetpack emissions exists
             }
+            
+            //Eject any waste from the jetpack
+            FJ.EjectInternalAtmosphere(__instance);
 
             // Check for fuel canister presence and fuel
             GasCanister gasCanister;
@@ -78,13 +87,11 @@ namespace FuelJetpack
                 }
                 MoleQuantity fuelToConsume = __instance.MolesToUse * (__instance.OutputSetting * gravityfactor * ConfigFile.FuelUsageMultiplier);
                 if (fuelToConsume > new MoleQuantity(0) )
-                {              
-                    // Add the removed gas to the internal atmosphere of the jetpack and handle combustion
+                {                    
+                    // Then move some gas from the canister and combust
                     __instance.InternalAtmosphere.Add(gasCanister.InternalAtmosphere.Remove(fuelToConsume, AtmosphereHelper.MatterState.Gas));
                     __instance.InternalAtmosphere.Sparked = true;
-                    __instance.InternalAtmosphere.ManualCombust(1f);
-                    //And then eject the waste from the jetpack
-                    FJ.EjectInternalAtmosphere(__instance);
+                    __instance.InternalAtmosphere.TryCombust(1f);
                 }
             }
             return false; // Skip the original method
@@ -97,6 +104,11 @@ namespace FuelJetpack
         [UsedImplicitly]
         static private void LateUpdatehPatch(Jetpack __instance)
         {
+            if (!GameManager.RunSimulation || !__instance.JetPackActivate)
+            {
+                return; //exit if game is paused or jetpack is not activated
+            }
+
             if (!jetpackBoostStates.ContainsKey(__instance))
             {
                 jetpackBoostStates[__instance] = false;
@@ -138,16 +150,16 @@ namespace FuelJetpack
                     baseJetpackSpeed = 3f;
                     break;
             }
-            // If the propellant canister contains NitrousOxide and Volatiles, increase the base speed by 25%
-            GasCanister gasCanister;
-            __instance.PropellentSlot.Contains<GasCanister>(out gasCanister);
-            if (gasCanister != null &&
-                gasCanister.InternalAtmosphere != null &&
-                gasCanister.InternalAtmosphere.GasMixture.NitrousOxide.Quantity > new MoleQuantity(0.01) &&
-                gasCanister.InternalAtmosphere.GasMixture.Volatiles.Quantity > new MoleQuantity(0.01))
-            {
-                baseJetpackSpeed *= 1.25f;
-            }
+            // Increase the speed accordingly to the temperature inside the jetpack atmosphere
+            float tempK = __instance.InternalAtmosphere != null ? __instance.InternalAtmosphere.Temperature.ToFloat() : 0f; 
+            // will give 0..1 based on temperature range in kelvin we want to consider
+            float normalizedTemp = Mathf.InverseLerp(1800.00f, 6000.00f, tempK);
+            // Map to multiplier range 0.8x .. 1.5x
+            float tempMultiplier = Mathf.Lerp(0.8f, 1.5f, normalizedTemp);
+            //Debug.Log("tempMultiplier: " + tempMultiplier + "JetpackTemp: " + tempK);
+
+            baseJetpackSpeed *= tempMultiplier;
+
             // Also multiply the speed by the OutputSetting of the jetpack (the Thrust up and down buttons setting) to a max of 250% speed boost
             __instance.JetPackSpeed = baseJetpackSpeed * Mathf.Clamp(__instance.OutputSetting + 0.5f, 0.6f, 2.5f);
         }
