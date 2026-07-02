@@ -157,7 +157,6 @@ namespace FuelJetpack
             // Map to multiplier range 0.8x .. 1.5x
             float tempMultiplier = Mathf.Lerp(0.8f, 1.5f, normalizedTemp);
             //Debug.Log("tempMultiplier: " + tempMultiplier + "JetpackTemp: " + tempK);
-
             baseJetpackSpeed *= tempMultiplier;
 
             // Also multiply the speed by the OutputSetting of the jetpack (the Thrust up and down buttons setting) to a max of 250% speed boost

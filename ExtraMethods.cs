@@ -11,7 +11,7 @@ namespace FuelJetpack
             bool inflamed = jetpack.InternalAtmosphere.Inflamed;
             if (jetpack.WorldAtmosphere == null || jetpack.WorldAtmosphere.Mode == AtmosphereHelper.AtmosphereMode.Global)
             {
-                jetpack.WorldAtmosphere = jetpack.GridController.AtmosphericsController.CloneGlobalAtmosphere(jetpack.ParentSlot.Parent.WorldGrid, 0L, true);
+                jetpack.WorldAtmosphere = jetpack.GridController.AtmosphericsController.CloneGlobalAtmosphere(jetpack.ParentSlot.Parent.WorldGrid, 0L, true, true);
             }
             jetpack.WorldAtmosphere.Add(jetpack.InternalAtmosphere.GasMixture);
             if (jetpack.WorldAtmosphere != null)
